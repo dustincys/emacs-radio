@@ -1,0 +1,67 @@
+分类	电台	URL
+中央	中国之声	https://ngcdn001.cnr.cn/live/zgzs/index.m3u8
+中央	经济之声	http://ngcdn002.cnr.cn/live/jjzs/index.m3u8
+中央	音乐之声	http://ngcdn003.cnr.cn/live/yyzs/index.m3u8
+中央	经典音乐广播	http://ngcdn004.cnr.cn/live/dszs/index.m3u8
+中央	台海之声	http://ngcdn005.cnr.cn/live/zhzs/index.m3u8
+中央	神州之声	http://ngcdn006.cnr.cn/live/szzs/index.m3u8
+中央	大湾区之声	http://ngcdn007.cnr.cn/live/hxzs/index.m3u8
+中央	民族之声	http://ngcdn009.cnr.cn/live/mzzs/index.m3u8
+中央	文艺之声	http://ngcdn010.cnr.cn/live/wyzs/index.m3u8
+中央	中国交通广播	http://ngcdn016.cnr.cn/live/gsgljtgb/index.m3u8
+中央	中国乡村之声	http://ngcdn017.cnr.cn/live/xczs/index.m3u8
+黑龙江	黑龙江新闻广播	http://satellitepull.cnr.cn/live/wx32hljxwgb/playlist.m3u8
+黑龙江	黑龙江交通广播	http://satellitepull.cnr.cn/live/wx32hljjtgb/playlist.m3u8
+黑龙江	黑龙江音乐广播	http://satellitepull.cnr.cn/live/wx32hljyygb/playlist.m3u8
+黑龙江	黑龙江都市女性广播	http://satellitepull.cnr.cn/live/wx32hljnxgb/playlist.m3u8
+黑龙江	黑龙江生活广播	http://satellitepull.cnr.cn/live/wx32hljsjcgb/playlist.m3u8
+黑龙江	黑龙江高校广播	http://satellitepull.cnr.cn/live/wx32hljgxgb/playlist.m3u8
+黑龙江	黑龙江老年少儿广播	http://satellitepull.cnr.cn/live/wx32hljajgb/playlist.m3u8
+黑龙江	黑龙江乡村广播	http://satellitepull.cnr.cn/live/wx32hljxcgb/playlist.m3u8
+吉林	吉林新闻综合广播	http://satellitepull.cnr.cn/live/wxjlxwzhgb/playlist.m3u8
+吉林	吉林交通广播	http://satellitepull.cnr.cn/live/wxjljtgb/playlist.m3u8
+吉林	吉林乡村广播	http://satellitepull.cnr.cn/live/wxjlxcgb/playlist.m3u8
+吉林	延边新闻广播	http://satellitepull.cnr.cn/live/wxybxwgb/playlist.m3u8
+辽宁	辽宁之声	http://satellitepull.cnr.cn/live/wxlnzhgb/playlist.m3u8
+辽宁	辽宁经济广播	http://satellitepull.cnr.cn/live/wxlnjjtb/playlist.m3u8
+辽宁	辽宁交通广播	http://satellitepull.cnr.cn/live/wxlnjtgb/playlist.m3u8
+辽宁	辽宁乡村广播	http://satellitepull.cnr.cn/live/wxlnxcgb/playlist.m3u8
+辽宁	辽宁文艺广播	http://satellitepull.cnr.cn/live/wxlnwygb/playlist.m3u8
+山东	山东综合广播	http://live-hls.ihzlh.linker.cc/ihzlh/sd_ts01_95.m3u8
+山东	山东经济广播	http://satellitepull.cnr.cn/live/wxsdjjgb/playlist.m3u8
+山东	山东交通广播	http://satellitepull.cnr.cn/live/wxsdjtgb/playlist.m3u8
+山东	山东文艺广播	http://live-hls.ihzlh.linker.cc/ihzlh/sd_ts03_975.m3u8
+山东	山东音乐广播	http://satellitepull.cnr.cn/live/wxsdyygb/playlist.m3u8
+山东	山东经典音乐广播	http://satellitepull.cnr.cn/live/wxsdshxxgb/playlist.m3u8
+山东	山东体育休闲广播	http://satellitepull.cnr.cn/live/wxsdtyxxgb/playlist.m3u8
+山东	山东乡村广播	http://satellitepull.cnr.cn/live/wxsdxcgb/playlist.m3u8
+山东备用	山东新闻广播	http://ls.qingting.fm/live/60180.m3u8
+山东备用	山东经济广播	http://ls.qingting.fm/live/60198.m3u8
+山东备用	山东交通广播	http://ls.qingting.fm/live/60262.m3u8
+山东备用	山东音乐广播	http://ls.qingting.fm/live/1665.m3u8
+山东备用	山东生活广播	http://ls.qingting.fm/live/60260.m3u8
+山东备用	山东体育广播	http://ls.qingting.fm/live/60266.m3u8
+山东备用	青岛新闻广播	http://lhttp.qingting.fm/live/1673/64k.mp3
+山东备用	青岛交通广播	http://lhttp.qingting.fm/live/1676/64k.mp3
+哈尔滨	哈尔滨综合广播	 https://stream.hrbtv.net/xwpl/playlist.m3u8
+哈尔滨	哈尔滨文艺广播	https://stream.hrbtv.net/wypl/playlist.m3u8
+哈尔滨	哈尔滨交通广播	https://stream.hrbtv.net/jtpl/playlist.m3u8
+哈尔滨	哈尔滨经济广播	https://stream.hrbtv.net/876pl/playlist.m3u8
+哈尔滨	哈尔滨音乐广播	https://stream.hrbtv.net/yypl/playlist.m3u8
+哈尔滨	哈尔滨古典音乐广播	https://stream.hrbtv.net/gdpl/playlist.m3u8
+哈尔滨	哈尔滨综合广播（备用）	https://stream.hrbtv.net/xwpl/sd/live.m3u8
+哈尔滨	哈尔滨文艺广播（备用）	https://stream.hrbtv.net/wypl/sd/live.m3u8
+哈尔滨	哈尔滨交通广播（备用）	https://stream.hrbtv.net/jtpl/sd/live.m3u8
+哈尔滨	哈尔滨经济广播（备用）	https://stream.hrbtv.net/876pl/sd/live.m3u8
+哈尔滨	哈尔滨音乐广播（备用）	https://stream.hrbtv.net/yypl/sd/live.m3u8
+哈尔滨	哈尔滨古典音乐广播（备用）	https://stream.hrbtv.net/gdpl/sd/live.m3u8
+国际英语	CRI CGTN Radio	https://sk.cri.cn/am846.m3u8
+国际英语	CRI China Plus 备用	http://cnlive.cnr.cn/hls/yyzxgb.m3u8
+国际英语	CRI NEWS Plus AM1008	http://sk.cri.cn/am1008.m3u8
+国际英语	BBC World Service	http://stream.live.vc.bbcmedia.co.uk/bbc_world_service
+国际英语	VOA Learning English	https://voa-ingest.akamaized.net/hls/live/2035234/160_342L/playlist.m3u8
+国际英语	NPR 24 Hour Program	https://npr-ice.streamguys1.com/live.mp3
+国际英语	DW Radio DW09	https://dw.audiostream.io/dw/1005/mp3/64/dw-radio-6
+国际英语	RFI English	https://live02.rfi.fr/rfianglais-96k.mp3
+国际英语	ABC NewsRadio	https://abc.streamguys1.com/live/newsradio/icecast.audio
+国际英语	ABC Radio National	https://abc.streamguys1.com/live/rnnsw/icecast.audio
