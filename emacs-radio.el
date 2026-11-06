@@ -55,6 +55,14 @@
 (require 'subr-x)
 (require 'json)
 
+;; Helm 在字节编译阶段和运行阶段都必须可用。
+;; helm-build-sync-source 是宏，需要在编译时完成展开。
+(eval-when-compile
+  (require 'helm-source))
+
+(require 'helm)
+(require 'helm-source)
+
 ;; 用户自定义参数集中在这个 group 中，可以用 M-x customize-group RET emacs-radio。
 ;; defcustom 是“配置”，改这些值通常不需要编辑函数主体。
 (defgroup emacs-radio nil
@@ -424,7 +432,7 @@ Results live under `emacs-radio-cache-directory'.  Use
            (text (pcase emacs-radio--state
                    ('playing (format " [📡 ▶ %s]" station-name))
                    ('paused (format " [📡 ⏸ %s]" station-name))
-                   ('connecting (format " [📻 🔄 %s]" station-name))
+                   ('connecting (format " [📡 🔄 %s]" station-name))
                    (_ nil)))
            (clickable (memq emacs-radio--state '(playing paused))))
       ;; Clickable text must carry a local-map text property; a plain
