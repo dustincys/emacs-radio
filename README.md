@@ -1,32 +1,34 @@
-# Emacs Radio v0.4.0 — 真实声音微型 SVG 曲线
+# Emacs Radio v0.4.0 — Real-Audio Miniature SVG Waveform
 
-适配 Emacs 27.1+ / Helm 3+ / mpv（支持 `astats` 音频滤镜）及图形版 Emacs 的 SVG 支持。
+<img src="https://github.com/dustincys/emacs-radio/blob/main/icon/EmacsRadioIcon.png" alt="Emacs Radio icon" width="128">
 
-## 原理
+Requires Emacs 27.1+ / Helm 3+ / mpv (with the `astats` audio filter) and SVG support in a graphical Emacs.
+
+## How It Works
 
 ```
-电台 URL -> mpv (唯一播放进程) -> 音频播放设备
-                        │
-                   astats=metadata=1:reset=1
-                        │
+Radio URL -> mpv (single playback process) -> audio output device
+                       │
+                  astats=metadata=1:reset=1
+                       │
               af-metadata/radio-meter
-                        │
+                       │
                 JSON IPC Unix socket
-                        │
-             最近 12 次真实 RMS dBFS
-                        │
-              SVG 连续音量包络曲线
-                        │
-                Mode-line: 📻 ▶ 台名 [小曲线]
+                       │
+           last 12 real RMS dBFS values
+                       │
+          SVG continuous volume envelope
+                       │
+            Mode-line: 📻 ▶ station [mini waveform]
 ```
 
-这是**真实 RMS 音量包络曲线**，反映主播与音乐的响度起伏；不是逐采样 PCM 电压波形，不能据此还原声谱。没有额外开第二条广播流，也不会包含其他应用的声音。mpv 的音频缓冲会造成曲线与扬声器实际发声有轻微延迟或提前。
+This is a **real RMS volume envelope curve**, reflecting the loudness of the host and the music; it is not a per-sample PCM voltage waveform, and you cannot reconstruct the sound spectrum from it. No second broadcast stream is opened, and no audio from other applications is captured. mpv's audio buffering can cause the waveform to lag or lead the actual speaker output slightly.
 
-## 安装
+## Installation
 
-1. 依赖：`sudo apt install mpv ffmpeg python3`，Emacs 中安装 Helm。
-2. 本 ZIP 中 `emacs-radio.el`、`emacs-radio-waveform.el`、`emacs-radio-probe.py` **必须在同一安装目录**。电台清单可以放在其他地方。
-3. 在配置中：
+1. Dependencies: `sudo apt install mpv ffmpeg python3`, and install Helm inside Emacs.
+2. In this ZIP, `emacs-radio.el`, `emacs-radio-waveform.el`, and `emacs-radio-probe.py` **must be in the same installation directory**. The station list can live elsewhere.
+3. In your config:
 
 ```elisp
 (add-to-list 'load-path "~/github/emacs-radio/")
@@ -36,62 +38,66 @@
 (emacs-radio-mode 1)
 ```
 
-升级前退出 Emacs 或移除旧的 `.elc`/`.eln` 缓存，确保 `.el` 的新版本确实被加载。不要只替换一个 `.el` 文件：新主文件依赖新增模块。
+Before upgrading, quit Emacs or remove the old `.elc`/`.eln` caches so the new `.el` versions are actually loaded. Don't replace just one `.el` file: the new main file depends on the added module.
 
 ## Spacemacs Private Layer
 
-`spacemacs-layer/my-radio/packages.el` 已把 `emacs-radio-waveform.el` 添加进 GitHub recipe 的 `:files`。如果已经有 `my-radio` layer：
+`spacemacs-layer/my-radio/packages.el` already adds `emacs-radio-waveform.el` to the GitHub recipe's `:files`. If you already have a `my-radio` layer:
 
-1. 先将本 ZIP 内的新源码文件提交到你的 `dustincys/emacs-radio` GitHub 仓库。
-2. 再替换 `~/.emacs.d/private/my-radio/packages.el`，让 Quelpa 安装时下载新增的波形模块。或者把整个 `spacemacs-layer/my-radio/` 复制到私有 layer 路径。
-3. 更新/重新安装 GitHub package 后重启 Emacs。
+1. First commit the new source files from this ZIP to your `dustincys/emacs-radio` GitHub repository.
+2. Then replace `~/.emacs.d/private/my-radio/packages.el` so Quelpa downloads the new waveform module during installation. Or copy the entire `spacemacs-layer/my-radio/` to your private layer path.
+3. Update/reinstall the GitHub package and restart Emacs.
 
-注意：如果本地包管理器只安装了旧版 3 文件的 recipe，将会提示 `Cannot open load file: emacs-radio-waveform`。
+Note: if your local package manager only installed the old 3-file recipe, you will see `Cannot open load file: emacs-radio-waveform`.
 
-## 使用
+## Usage
 
-- `M-x emacs-radio-scan`：按 URL 去重并检测可播放流（扫描需要 FFmpeg）。
-- `M-x emacs-radio`：Helm 搜索电台，列表按使用频率降序，同频率稳定排序，列表支持上下循环。
-- `M-x emacs-radio-toggle-pause`：暂停/恢复。或者点击 Mode-line 的收音机状态/曲线。
-- `M-x emacs-radio-stop`：停止 mpv、定时器、IPC，且从 Mode-line 完全隐藏。
-- `M-x emacs-radio-waveform-status`：显示当前 RMS、距最近更新时间、IPC 状态以及失败原因。**判断是否真的采样成功，请优先看这个命令。**
+- `M-x emacs-radio-scan`: de-duplicate by URL and detect playable streams (scanning requires FFmpeg).
+- `M-x emacs-radio`: search stations with Helm; the list is sorted by usage frequency (descending), with stable ordering for equal frequencies and wrap-around navigation.
+- `M-x emacs-radio-toggle-pause`: pause/resume. You can also click the radio status/waveform in the mode line.
+- `M-x emacs-radio-stop`: stop mpv, timers, and IPC, and hide the mode-line indicator entirely.
+- `M-x emacs-radio-waveform-status`: show the current RMS, time since the last update, IPC status, and failure reason. **Check this command first to determine whether sampling is actually working.**
 
-播放中显示绿色的小曲线，暂停显示水平线；停播隐藏。正在连接时可能暂时只显示平线。
+While playing, a small green waveform is shown; while paused, a horizontal line is shown; when stopped, it is hidden. While connecting, only a flat line may briefly appear.
 
-## 配置
+![Station list](https://github.com/dustincys/emacs-radio/blob/main/screenshot/radio_station.png)
+
+![Mode-line status](https://github.com/dustincys/emacs-radio/blob/main/screenshot/status_line.png)
+
+## Configuration
 
 ```elisp
 (setq emacs-radio-waveform-enabled t
-      emacs-radio-waveform-interval 0.15  ; 约 6.7 次/秒
-      emacs-radio-waveform-width 42       ; 像素
+      emacs-radio-waveform-interval 0.15  ; about 6.7 updates/second
+      emacs-radio-waveform-width 42       ; pixels
       emacs-radio-waveform-height 16
       emacs-radio-waveform-color "#65DFA3"
       emacs-radio-waveform-samples 12)
 ```
 
-如果你想关闭波形而继续使用电台播放器，将 `emacs-radio-waveform-enabled` 设置为 `nil` 并重新选台。
+To disable the waveform while keeping the radio player, set `emacs-radio-waveform-enabled` to `nil` and select a station again.
 
-图形 Emacs 必须有 SVG 图像支持，检查：
+The graphical Emacs must have SVG image support; check:
 
 ```elisp
-(image-type-available-p 'svg)  ; 应为 t
+(image-type-available-p 'svg)  ; should be t
 ```
 
-在纯终端 Emacs 中仍能播放和切换电台，但**不会绘制 SVG 图标**。如果视频流缺少可用的 `astats` 元数据，图标保持基线，`M-x emacs-radio-waveform-status` 显示对应错误。
+In a pure-terminal Emacs you can still play and switch stations, but the **SVG icon will not be drawn**. If the video stream lacks usable `astats` metadata, the icon stays at the baseline and `M-x emacs-radio-waveform-status` shows the corresponding error.
 
-## 常见问题
+## FAQ
 
-1. **曲线不动**：先看 `M-x emacs-radio-waveform-status` 是否显示 `IPC connected`、RMS 是否为数字；再检查 `*emacs-radio-mpv*` 缓冲区中的滤镜/音频错误。
-2. **`Invalid function: helm-build-sync-source`**：新版主文件顶层已经提前 require `helm-source`，但必须清理旧的 `.elc` 并重新安装包。
-3. **GitHub 的 TSV 写回可能丢失**：本包使用的是此前更新的 Python 脚本，默认会将可播放台写回 `radio_sources.tsv` 并生成 `.bak`。若不希望在 GitHub package 安装目录修改 TSV，请将 TSV 放入用户目录，或以 `--no-write-back` 手动运行脚本。
-4. **验证**：本地未装 Emacs/mpv，因此当前交付已完成结构、Python 语法与文本级检查，未在实际 Spacemacs + mpv 环境做端到端音频测试。
+1. **Waveform not moving**: first check whether `M-x emacs-radio-waveform-status` shows `IPC connected` and a numeric RMS value; then inspect the `*emacs-radio-mpv*` buffer for filter/audio errors.
+2. **`Invalid function: helm-build-sync-source`**: the new main file already requires `helm-source` at the top level, but you must clean up old `.elc` files and reinstall the package.
+3. **TSV write-back on GitHub may be lost**: this package uses the updated Python script, which by default writes playable stations back to `radio_sources.tsv` and creates a `.bak`. If you don't want the TSV modified in the GitHub package install directory, put the TSV in a user directory or run the script manually with `--no-write-back`.
+4. **Verification**: Emacs/mpv were not installed locally, so this delivery has completed structural, Python syntax, and text-level checks, but no end-to-end audio test in an actual Spacemacs + mpv environment.
 
-## 测试
+## Testing
 
-在安装了 Emacs 的环境（包含 Helm）可执行：
+In an environment with Emacs installed (including Helm), run:
 
 ```sh
 emacs -Q --batch -L . -l tests/emacs-radio-waveform-tests.el -f ert-run-tests-batch-and-exit
 ```
 
-本项目的测试聚焦 RMS 解析、SVG 路径生成、数据窗口更新；真实 mpv 音频与桌面显示仍需本机手动检查。
+This project's tests focus on RMS parsing, SVG path generation, and data window updates; real mpv audio and desktop display still require manual local verification.
