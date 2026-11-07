@@ -434,12 +434,12 @@ Results live under `emacs-radio-cache-directory'.  Use
            (state-text (pcase emacs-radio--state
                          ('playing  "▶")
                          ('paused   "⏸")
-                         ('connecting "…")
+                         ('connecting "🔃")
                          (_ "")))
            ;; 这里的 SVG 不是柱状图，而是 42×16px 的连续音量曲线。
            ;; 真实 RMS 在专用 IPC filter 中计算并缓存图像；本函数只拼接。
            (wave (emacs-radio-waveform-icon))
-           (text (concat (format " [📻 %s %s" state-text station-name)
+           (text (concat (format "[📡 %s %s" state-text station-name)
                          (if (> (length wave) 0) (concat " " wave) "")
                          "]"))
            (clickable (memq emacs-radio--state '(playing paused))))
@@ -719,18 +719,18 @@ ON-SUCCESS is called only after mpv acknowledges the command."
   ;; 只在本次电台 Helm 列表启用上下端循环，不影响其他 Helm 页面。
   (let ((helm-move-to-line-cycle-in-source t))
     (helm :sources
-        (helm-build-sync-source "Playable radio stations"
-          :candidates
-          (mapcar
-           (lambda (station)
-             (cons (format "[%3d] %-10s  %s"
-                           (emacs-radio--play-count station)
-                           (nth 0 station) (nth 1 station)) station))
-           (emacs-radio--ranked-stations))
-          :action '(("Play station" . emacs-radio-play))
-          :candidate-number-limit 500
-          :multiline nil)
-        :buffer "*helm radio*")))
+          (helm-build-sync-source "Playable radio stations"
+            :candidates
+            (mapcar
+             (lambda (station)
+               (cons (format "[%3d] %-10s  %s"
+                             (emacs-radio--play-count station)
+                             (nth 0 station) (nth 1 station)) station))
+             (emacs-radio--ranked-stations))
+            :action '(("Play station" . emacs-radio-play))
+            :candidate-number-limit 500
+            :multiline nil)
+          :buffer "*helm radio*")))
 
 ;; require 'emacs-radio 依赖下面的 provide 声明识别功能已加载。
 (provide 'emacs-radio)
