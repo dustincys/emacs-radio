@@ -432,8 +432,8 @@ Results live under `emacs-radio-cache-directory'.  Use
              (not (eq emacs-radio--state 'stopped)))
     (let* ((station-name (nth 1 emacs-radio--station))
            (state-text (pcase emacs-radio--state
-                         ('playing  "▶")
-                         ('paused   "⏸")
+                         ('playing  "⏸")
+                         ('paused   "▶")
                          ('connecting "🔃")
                          (_ "")))
            ;; 这里的 SVG 不是柱状图，而是 42×16px 的连续音量曲线。
