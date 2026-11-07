@@ -1,7 +1,10 @@
 ;;; emacs-radio.el --- Helm radio browser and mpv player -*- lexical-binding: t; -*-
+
+;; Author: ChatGPT
+;; Version: 0.4.0
 ;; Package-Requires: ((emacs "27.1") (helm "3.0"))
 ;; Keywords: multimedia, convenience
-;; URL: https://example.invalid/emacs-radio
+;; URL: https://github.com/dustincys/emacs-radio
 
 ;;; Commentary:
 ;; Read radio_sources.tsv, asynchronously probe streams using FFmpeg,
@@ -12,7 +15,7 @@
 ;;; Code:
 
 ;; ============================================================================
-;; 中文阅读指南：Emacs Radio v0.3.0
+;; 中文阅读指南：Emacs Radio v0.4.0
 ;; ============================================================================
 ;; 本文件实现的是“电台管理界面”，并不直接解码音频：
 ;;
@@ -48,20 +51,20 @@
 ;;   lambda：匿名回调；sentinel：进程退出等事件回调；
 ;;   buffer：Emacs 文本缓冲区（可用作后台进程日志）。
 ;;
-;; 本次仅扩充中文注释，不改变原来的播放、扫描及排序逻辑。
+;; v0.4.0 增加 mpv astats 实时 RMS -> SVG 曲线；详见 emacs-radio-waveform.el。
 ;; ============================================================================
 
 (require 'cl-lib)
 (require 'subr-x)
 (require 'json)
 
-;; Helm 在字节编译阶段和运行阶段都必须可用。
-;; helm-build-sync-source 是宏，需要在编译时完成展开。
-(eval-when-compile
-  (require 'helm-source))
-
+;; Helm 的 helm-build-sync-source 是宏，字节编译时必须提前加载。
+(eval-when-compile (require 'helm-source))
 (require 'helm)
 (require 'helm-source)
+
+;; 仅依赖 Emacs 自带 svg.el；waveform 模块不再启动额外 FFmpeg。
+(require 'emacs-radio-waveform)
 
 ;; 用户自定义参数集中在这个 group 中，可以用 M-x customize-group RET emacs-radio。
 ;; defcustom 是“配置”，改这些值通常不需要编辑函数主体。
@@ -423,29 +426,33 @@ Results live under `emacs-radio-cache-directory'.  Use
 ;; 这里更新的是界面文本，并不负责控制 mpv。
 ;; --------------------------------------------------------------------------
 (defun emacs-radio--mode-line-text ()
-  "Return a clickable mode-line indicator, or nil when stopped."
-  ;; Returning nil is essential: no radio widget is displayed after Stop.
+  "构造支持鼠标点击的 Mode-line 字符串，停止时不显示。"
   (when (and emacs-radio-show-mode-line
              emacs-radio--station
              (not (eq emacs-radio--state 'stopped)))
     (let* ((station-name (nth 1 emacs-radio--station))
-           (text (pcase emacs-radio--state
-                   ('playing (format " [📡 ▶ %s]" station-name))
-                   ('paused (format " [📡 ⏸ %s]" station-name))
-                   ('connecting (format " [📡 🔄 %s]" station-name))
-                   (_ nil)))
+           (state-text (pcase emacs-radio--state
+                         ('playing  "▶")
+                         ('paused   "⏸")
+                         ('connecting "…")
+                         (_ "")))
+           ;; 这里的 SVG 不是柱状图，而是 42×16px 的连续音量曲线。
+           ;; 真实 RMS 在专用 IPC filter 中计算并缓存图像；本函数只拼接。
+           (wave (emacs-radio-waveform-icon))
+           (text (concat (format " [📻 %s %s" state-text station-name)
+                         (if (> (length wave) 0) (concat " " wave) "")
+                         "]"))
            (clickable (memq emacs-radio--state '(playing paused))))
-      ;; Clickable text must carry a local-map text property; a plain
-      ;; string in `global-mode-string' does not receive mouse events.
-      (when text
-        (if clickable
-            (propertize text
-                        'local-map emacs-radio--mode-line-mouse-map
-                        'mouse-face 'mode-line-highlight
-                        'help-echo (if (eq emacs-radio--state 'paused)
-                                       "mouse-1: Resume radio"
-                                     "mouse-1: Pause radio"))
-          (propertize text 'help-echo "Connecting to radio stream…"))))))
+      ;; 在最终字符串上统一设置鼠标事件。SVG 所在的空格保留 display 属性，
+      ;; 同时也继承 local-map，所以点击曲线本身亦可暂停/继续。
+      (if clickable
+          (propertize text
+                      'local-map emacs-radio--mode-line-mouse-map
+                      'mouse-face 'mode-line-highlight
+                      'help-echo (if (eq emacs-radio--state 'paused)
+                                     "mouse-1: Resume radio"
+                                   "mouse-1: Pause radio"))
+        (propertize text 'help-echo "Connecting to radio stream…")))))
 
 ;; 不是固定的文字，而是一个动态表达式：每次刷新时重新计算电台显示。
 (defvar emacs-radio--mode-line-entry
@@ -481,7 +488,9 @@ Results live under `emacs-radio-cache-directory'.  Use
                 (append global-mode-string (list emacs-radio--mode-line-entry))))
         (emacs-radio-load))
     (setq global-mode-string
-          (delete emacs-radio--mode-line-entry global-mode-string)))
+          (delete emacs-radio--mode-line-entry global-mode-string))
+    ;; 退出界面模式时也停止后台 RMS 采样，避免隐藏后浪费资源。
+    (emacs-radio-waveform-stop))
   (emacs-radio--refresh-mode-line))
 
 ;; --------------------------------------------------------------------------
@@ -509,6 +518,8 @@ Results live under `emacs-radio-cache-directory'.  Use
   ;; Invalidate delayed callbacks before terminating the old mpv process.
   (interactive)
   (cl-incf emacs-radio--generation)
+  ;; 先终止音频计量进程的 IPC 与 timer，再删除 mpv socket。
+  (emacs-radio-waveform-stop)
   (let ((old-player emacs-radio--player))
     (setq emacs-radio--player nil)
     (when (process-live-p old-player)
@@ -551,11 +562,19 @@ Results live under `emacs-radio-cache-directory'.  Use
               (make-process
                :name "emacs-radio-mpv"
                :buffer buffer
-               :command (list emacs-radio-mpv-program
-                              "--no-config" "--no-video" "--no-terminal"
-                              "--msg-level=all=warn"
-                              (concat "--input-ipc-server=" socket)
-                              "--" url)
+               :command (append
+                         (list emacs-radio-mpv-program
+                               "--no-config" "--no-video" "--no-terminal"
+                               "--msg-level=all=warn")
+                         ;; 关闭可视化或纯终端 Emacs 不添加滤镜开销。
+                         ;; 开启时只分析当前 mpv 已解码的音频，不会额外拉流。
+                         ;; 通过标签 radio-meter 读取 RMS 元数据。
+                         (when (and emacs-radio-waveform-enabled
+                                    (display-graphic-p)
+                                    (image-type-available-p 'svg))
+                           (list "--af=@radio-meter:astats=metadata=1:reset=1"))
+                         (list (concat "--input-ipc-server=" socket)
+                               "--" url))
                :noquery t
                :sentinel
                (lambda (proc _event)
@@ -563,7 +582,9 @@ Results live under `emacs-radio-cache-directory'.  Use
                             (eq proc emacs-radio--player)
                             (memq (process-status proc) '(exit signal)))
                    (setq emacs-radio--player nil
-                         emacs-radio--state 'stopped)
+                         emacs-radio--state 'stopped
+                         emacs-radio--station nil)
+                   (emacs-radio-waveform-stop)
                    (emacs-radio--delete-ipc-socket)
                    (emacs-radio--refresh-mode-line)
                    (message "Radio playback ended (%s). See buffer %s"
@@ -581,6 +602,8 @@ Results live under `emacs-radio-cache-directory'.  Use
                   (process-live-p emacs-radio--player))
          (setq emacs-radio--state 'playing)
          (emacs-radio--refresh-mode-line))))
+    ;; 波形只在图形 Emacs + SVG 可用时启动；计时器等待 mpv socket 就绪。
+    (emacs-radio-waveform-start generation)
     (emacs-radio--record-play station)
     (emacs-radio--refresh-mode-line)
     (message "Opening radio: %s" (nth 1 station))))
@@ -639,7 +662,9 @@ ON-SUCCESS is called only after mpv acknowledges the command."
     (user-error "No radio station is playing"))
   (emacs-radio--ipc-command
    ["set_property" "pause" t]
-   (lambda () (setq emacs-radio--state 'paused)
+   (lambda ()
+     (setq emacs-radio--state 'paused)
+     (emacs-radio-waveform-pause)
      (emacs-radio--refresh-mode-line))))
 
 ;; --------------------------------------------------------------------------
@@ -656,7 +681,9 @@ ON-SUCCESS is called only after mpv acknowledges the command."
     (user-error "No radio station is playing"))
   (emacs-radio--ipc-command
    ["set_property" "pause" :false]
-   (lambda () (setq emacs-radio--state 'playing)
+   (lambda ()
+     (setq emacs-radio--state 'playing)
+     (emacs-radio-waveform-resume)
      (emacs-radio--refresh-mode-line))))
 
 ;; --------------------------------------------------------------------------
@@ -680,37 +707,30 @@ ON-SUCCESS is called only after mpv acknowledges the command."
 ;; Helm 候选项是 (显示文字 . STATION)；选择后 action 将 STATION 传给
 ;; emacs-radio-play。无缓存时提示用户先执行 emacs-radio-scan。
 ;; --------------------------------------------------------------------------
-;;;###autoload
 (defun emacs-radio ()
-  "使用 Helm 搜索并播放已经验证可用的电台。"
+  "Use Helm to choose and play a previously verified radio station."
+  ;; Helm candidate values are complete station rows for `emacs-radio-play`.
   (interactive)
   (require 'helm)
-  (unless emacs-radio-mode
-    (emacs-radio-mode 1))
-  (unless emacs-radio--stations
-    (emacs-radio-load))
+  (unless emacs-radio-mode (emacs-radio-mode 1))
+  (unless emacs-radio--stations (emacs-radio-load))
   (unless emacs-radio--stations
     (user-error "No playable cache yet: run M-x emacs-radio-scan first"))
-
-  ;; 只在本次 Helm 电台搜索过程中启用头尾循环。
-  ;; 不改变其他 Helm 界面的导航行为。
+  ;; 只在本次电台 Helm 列表启用上下端循环，不影响其他 Helm 页面。
   (let ((helm-move-to-line-cycle-in-source t))
-    (helm
-     :sources
-     (helm-build-sync-source "Playable radio stations"
-       :candidates
-       (mapcar
-        (lambda (station)
-          (cons (format "[%3d] %-10s  %s"
-                        (emacs-radio--play-count station)
-                        (nth 0 station)
-                        (nth 1 station))
-                station))
-        (emacs-radio--ranked-stations))
-       :action '(("Play station" . emacs-radio-play))
-       :candidate-number-limit 500
-       :multiline nil)
-     :buffer "*helm radio*")))
+    (helm :sources
+        (helm-build-sync-source "Playable radio stations"
+          :candidates
+          (mapcar
+           (lambda (station)
+             (cons (format "[%3d] %-10s  %s"
+                           (emacs-radio--play-count station)
+                           (nth 0 station) (nth 1 station)) station))
+           (emacs-radio--ranked-stations))
+          :action '(("Play station" . emacs-radio-play))
+          :candidate-number-limit 500
+          :multiline nil)
+        :buffer "*helm radio*")))
 
 ;; require 'emacs-radio 依赖下面的 provide 声明识别功能已加载。
 (provide 'emacs-radio)

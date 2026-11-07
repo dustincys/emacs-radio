@@ -1,59 +1,97 @@
-# Emacs Radio
+# Emacs Radio v0.4.0 — 真实声音微型 SVG 曲线
 
-Standalone Emacs package for Internet radio: TSV source → asynchronous FFmpeg probing → playable cache → Helm station search → mpv streaming → mode-line playback status.
+适配 Emacs 27.1+ / Helm 3+ / mpv（支持 `astats` 音频滤镜）及图形版 Emacs 的 SVG 支持。
 
-## Dependencies
+## 原理
 
-- Emacs 27.1+ with `helm` installed (`M-x package-install RET helm RET`, or Spacemacs `helm` layer)
-- Python 3 (standard library only)
-- `ffmpeg` and `mpv`: `sudo apt install ffmpeg mpv`
+```
+电台 URL -> mpv (唯一播放进程) -> 音频播放设备
+                        │
+                   astats=metadata=1:reset=1
+                        │
+              af-metadata/radio-meter
+                        │
+                JSON IPC Unix socket
+                        │
+             最近 12 次真实 RMS dBFS
+                        │
+              SVG 连续音量包络曲线
+                        │
+                Mode-line: 📻 ▶ 台名 [小曲线]
+```
 
-## Install
+这是**真实 RMS 音量包络曲线**，反映主播与音乐的响度起伏；不是逐采样 PCM 电压波形，不能据此还原声谱。没有额外开第二条广播流，也不会包含其他应用的声音。mpv 的音频缓冲会造成曲线与扬声器实际发声有轻微延迟或提前。
 
-Keep `emacs-radio.el` and `emacs-radio-probe.py` in the same directory; `radio_sources.tsv` may be elsewhere.
+## 安装
+
+1. 依赖：`sudo apt install mpv ffmpeg python3`，Emacs 中安装 Helm。
+2. 本 ZIP 中 `emacs-radio.el`、`emacs-radio-waveform.el`、`emacs-radio-probe.py` **必须在同一安装目录**。电台清单可以放在其他地方。
+3. 在配置中：
 
 ```elisp
 (add-to-list 'load-path "~/github/emacs-radio/")
 (require 'emacs-radio)
-(setq emacs-radio-sources-file "~/github/emacs-radio/radio_sources.tsv")
-(setq emacs-radio-cache-directory "~/.emacs.d/emacs-radio-cache/")
+(setq emacs-radio-sources-file "~/github/emacs-radio/radio_sources.tsv"
+      emacs-radio-cache-directory "~/.emacs.d/emacs-radio-cache/")
 (emacs-radio-mode 1)
-
-;; Optional shortcuts (Spacemacs leader bindings can be configured instead)
-(global-set-key (kbd "C-c r r") #'emacs-radio)
-(global-set-key (kbd "C-c r s") #'emacs-radio-scan)
-(global-set-key (kbd "C-c r SPC") #'emacs-radio-toggle-pause)
-(global-set-key (kbd "C-c r q") #'emacs-radio-stop)
 ```
 
-First run `M-x emacs-radio-scan`. The scan runs **asynchronously**; use `M-x emacs-radio-scan-log` to view progress. On success the cache directory contains:
+升级前退出 Emacs 或移除旧的 `.elc`/`.eln` 缓存，确保 `.el` 的新版本确实被加载。不要只替换一个 `.el` 文件：新主文件依赖新增模块。
 
-- `radio_results.csv`: all tested stations and statuses/error reasons
-- `radio_playable.tsv`: **only FFmpeg-decodable stations**
-- `radio_playable.m3u`: corresponding player playlist
+## Spacemacs Private Layer
 
-Subsequently run `M-x emacs-radio` (or `C-c r r`) to Helm-search the verified list. Cache is loaded upon initialization; re-run scan only when needed. Stream URLs frequently change; regional CDN restrictions may cause failure.
+`spacemacs-layer/my-radio/packages.el` 已把 `emacs-radio-waveform.el` 添加进 GitHub recipe 的 `:files`。如果已经有 `my-radio` layer：
 
-The global mode line shows `[Radio … Station]` while connecting, `[Radio ▶ Station]` while the mpv process is running, and `[Radio ⏸ Station]` when paused. **Left-click the radio indicator** to pause/resume (mouse-1). **After `emacs-radio-stop`, the indicator disappears entirely** until a station starts again. `▶` means mpv is running, not independent proof audio output is audible. Inspect buffer ` *emacs-radio-mpv*` for errors.
+1. 先将本 ZIP 内的新源码文件提交到你的 `dustincys/emacs-radio` GitHub 仓库。
+2. 再替换 `~/.emacs.d/private/my-radio/packages.el`，让 Quelpa 安装时下载新增的波形模块。或者把整个 `spacemacs-layer/my-radio/` 复制到私有 layer 路径。
+3. 更新/重新安装 GitHub package 后重启 Emacs。
 
-`C-c r SPC` toggles pause through mpv's Unix-domain JSON IPC socket. `emacs-radio-stop` terminates the player. This IPC approach is intended for Unix/Linux, such as Debian.
+注意：如果本地包管理器只安装了旧版 3 文件的 recipe，将会提示 `Cannot open load file: emacs-radio-waveform`。
 
-## Notes
+## 使用
 
-- Source file should contain tab-separated columns `分类`, `电台`, `URL` in that order.
-- The scan does not modify the original source TSV.
-- To change timeout/parallelism, customize `emacs-radio-probe-timeout` and `emacs-radio-probe-workers`.
-- The Python scan is based on the supplied `check_radios.py` and checks whether FFmpeg can actually decode 2 seconds of audio, not just receive HTTP 200.
-- The mode-line indicator is added to `global-mode-string`, so it can be displayed in every buffer using standard mode-line settings. Themes with custom mode-line layouts may need to include `global-mode-string`.
+- `M-x emacs-radio-scan`：按 URL 去重并检测可播放流（扫描需要 FFmpeg）。
+- `M-x emacs-radio`：Helm 搜索电台，列表按使用频率降序，同频率稳定排序，列表支持上下循环。
+- `M-x emacs-radio-toggle-pause`：暂停/恢复。或者点击 Mode-line 的收音机状态/曲线。
+- `M-x emacs-radio-stop`：停止 mpv、定时器、IPC，且从 Mode-line 完全隐藏。
+- `M-x emacs-radio-waveform-status`：显示当前 RMS、距最近更新时间、IPC 状态以及失败原因。**判断是否真的采样成功，请优先看这个命令。**
 
-## Upgrade (v0.2.0)
+播放中显示绿色的小曲线，暂停显示水平线；停播隐藏。正在连接时可能暂时只显示平线。
 
-Replace the old `emacs-radio.el` with the new version, then restart Emacs or run `M-x load-file` on it. If an existing minor mode is already enabled, `M-x emacs-radio-mode` twice toggles it off/on. Mouse interaction uses text properties (`local-map`, `mouse-face` and `help-echo`) on the mode-line string. The indicator is absent when no station is active. Comments are included in each Elisp function explaining implementation choices.
+## 配置
 
-## Upgrade (v0.3.0): usage ranking and deduplication
+```elisp
+(setq emacs-radio-waveform-enabled t
+      emacs-radio-waveform-interval 0.15  ; 约 6.7 次/秒
+      emacs-radio-waveform-width 42       ; 像素
+      emacs-radio-waveform-height 16
+      emacs-radio-waveform-color "#65DFA3"
+      emacs-radio-waveform-samples 12)
+```
 
-- Helm candidates now show `[play count]` and are sorted by **descending number of times selected**. Ties keep the order in `radio_playable.tsv`. For example, `[ 12] 山东 山东交通广播` comes before `[  2] 中央 中国之声`.
-- One successful launch of an `mpv` process increments the count by one. Pause/resume and opening Helm without choosing a station do **not** increment it. Counts are keyed by **URL**, so if the station display name changes the count is retained. A launched mpv process does not prove audible audio output.
-- Counts persist in `~/.emacs.d/emacs-radio-cache/radio_usage.tsv` by default, or `emacs-radio-usage-file` if customized. Scanning will not overwrite this file. Existing v0.2.0 caches continue to load; prior usage counts cannot be reconstructed, so all stations start at zero.
-- Before FFmpeg probing, the Python scanner removes duplicate URLs (after stripping surrounding whitespace), keeping the **first** name/category for each URL. A station with multiple distinct backup URLs is still represented by multiple rows. Empty URLs are ignored. `radio_results.csv`, `radio_playable.tsv`, and `radio_playable.m3u` all contain one row per unique URL. An older duplicate-filled playable cache is also deduplicated in memory by Emacs when loaded.
-- After replacing the package, restart Emacs, or evaluate `(emacs-radio-mode -1)` then reload `emacs-radio.el` and evaluate `(emacs-radio-mode 1)`. Run `M-x emacs-radio-scan` to regenerate a clean cache.
+如果你想关闭波形而继续使用电台播放器，将 `emacs-radio-waveform-enabled` 设置为 `nil` 并重新选台。
+
+图形 Emacs 必须有 SVG 图像支持，检查：
+
+```elisp
+(image-type-available-p 'svg)  ; 应为 t
+```
+
+在纯终端 Emacs 中仍能播放和切换电台，但**不会绘制 SVG 图标**。如果视频流缺少可用的 `astats` 元数据，图标保持基线，`M-x emacs-radio-waveform-status` 显示对应错误。
+
+## 常见问题
+
+1. **曲线不动**：先看 `M-x emacs-radio-waveform-status` 是否显示 `IPC connected`、RMS 是否为数字；再检查 `*emacs-radio-mpv*` 缓冲区中的滤镜/音频错误。
+2. **`Invalid function: helm-build-sync-source`**：新版主文件顶层已经提前 require `helm-source`，但必须清理旧的 `.elc` 并重新安装包。
+3. **GitHub 的 TSV 写回可能丢失**：本包使用的是此前更新的 Python 脚本，默认会将可播放台写回 `radio_sources.tsv` 并生成 `.bak`。若不希望在 GitHub package 安装目录修改 TSV，请将 TSV 放入用户目录，或以 `--no-write-back` 手动运行脚本。
+4. **验证**：本地未装 Emacs/mpv，因此当前交付已完成结构、Python 语法与文本级检查，未在实际 Spacemacs + mpv 环境做端到端音频测试。
+
+## 测试
+
+在安装了 Emacs 的环境（包含 Helm）可执行：
+
+```sh
+emacs -Q --batch -L . -l tests/emacs-radio-waveform-tests.el -f ert-run-tests-batch-and-exit
+```
+
+本项目的测试聚焦 RMS 解析、SVG 路径生成、数据窗口更新；真实 mpv 音频与桌面显示仍需本机手动检查。
