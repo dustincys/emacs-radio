@@ -324,3 +324,39 @@ Hermann Park·莱斯大学	KTRU 96.1 Rice Radio	https://ktru.org/listen/纽约·
 凤凰城·新闻	KJZZ 91.5	https://kjzz.streamguys1.com/kjzz_mp3_128
 圣安东尼奥·新闻	KSTX 89.1 Texas Public Radio	https://playerservices.streamtheworld.com/api/livestream-redirect/KSTXFM.mp3
 圣安东尼奥·古典	KPAC 88.3	https://playerservices.streamtheworld.com/api/livestream-redirect/KPACFM.mp3
+儿童·童谣·加利福尼亚	Kids Public Radio - Pipsqueaks	http://kidspublicradio2.got.net:8000/pipsqueaks
+儿童·故事·加利福尼亚	Kids Public Radio - Jabberwocky	http://kidspublicradio.got.net:8000/jabberwocky
+幼儿·摇篮曲·加利福尼亚	Kids Public Radio - Lullaby	http://kidspublicradio2.got.net:8000/lullaby
+儿童·音乐故事·美国	Kiddo Radio	https://api.radioking.io/radio/553403/listen.m3u
+儿童·古典乐·明尼苏达	YourClassical Children	https://classicalkids.stream.publicradio.org/classicalkids.aac
+幼儿·睡眠音乐·明尼苏达	YourClassical Sleep	https://lullabies.stream.publicradio.org/lullabies.aac
+儿童·宗教·田纳西	LifeTalk Kids	https://listen.streamon.fm/ltrkids
+儿童·宗教·密歇根	Keys for Kids Radio AAC	https://kfkr.sslstream.com:8443/kfkr.aac
+儿童·宗教·密歇根	Keys for Kids Radio Live365	https://streaming.live365.com/a78246
+儿童·故事·新泽西	KART Kids Radio One	http://213.136.79.20:9000/;
+儿童·宗教·美国	Abiding Radio Kids	https://test.abidingradio.com/listen/abiding_radio_-_kids/1
+美国·加利福尼亚/全国·童谣	Kids Public Radio - Pipsqueaks	http://kidspublicradio2.got.net:8000/pipsqueaks
+美国·加利福尼亚/全国·儿童故事	Kids Public Radio - Jabberwocky	http://kidspublicradio.got.net:8000/jabberwocky
+美国·加利福尼亚/全国·摇篮曲	Kids Public Radio - Lullaby	http://kidspublicradio2.got.net:8000/lullaby
+美国·全国/网络·儿歌/故事	Kiddo Radio	https://api.radioking.io/radio/553403/listen.m3u
+美国·明尼苏达/圣保罗·儿童古典	YourClassical Children	https://classicalkids.stream.publicradio.org/classicalkids.aac
+美国·明尼苏达/圣保罗·睡眠/摇篮曲	YourClassical Sleep / Lullabies	https://lullabies.stream.publicradio.org/lullabies.aac
+美国·田纳西/全国·儿童基督教/故事	LifeTalk Kids	https://listen.streamon.fm/ltrkids
+美国·密歇根/大急流城·儿童基督教/故事	Keys for Kids Radio	https://streaming.live365.com/a78246_2
+美国·美国/网络·儿童基督教	Abiding Radio - Kids	https://test.abidingradio.com/listen/abiding_radio_-_kids/1
+美国·宾夕法尼亚/匹兹堡·儿童音乐	iQ Kids Radio	https://playerservices.streamtheworld.com/api/livestream-redirect/SAM04AAC89_SC
+美国·明尼苏达/明尼阿波利斯·亲子音乐	Rock the Cradle	http://rockthecradle.stream.publicradio.org/rockthecradle-tunein.mp3
+加拿大·多伦多/安大略·迪士尼乐园音乐	DMagicWorld Radio	https://www.dmagicworld.com/DMagicWorld.m3u
+加拿大·安大略/在线（目录归属）·迪士尼主题	DParkRadio - Channel 1 Main	https://dparkradio.com/ch1.pls
+加拿大·安大略/在线（目录归属）·主题公园环境音乐	DParkRadio - Channel 2 Background	https://dparkradio.com/ch2.pls
+加拿大·安大略/在线（目录归属）·节日/主题公园	DParkRadio - Channel 3 Holiday	https://dparkradio.com/ch3.pls
+加拿大·安大略/在线（目录归属）·主题公园音频	DParkRadio - Channel 4 GuestTV	https://dparkradio.com/ch4.pls
+澳大利亚·悉尼/全国·幼儿故事/儿歌	ABC Kids listen	https://mediaserviceslive.akamaized.net/hls/live/2038321/abcextra/masterlq.m3u8
+澳大利亚·悉尼·儿童音乐	Kinderling Kids Radio	https://playerservices.streamtheworld.com/api/livestream-redirect/KKR_ADE.mp3?dist=
+澳大利亚·墨尔本/网络·儿童音乐	Little Rockers Radio	http://icy.ihrcast.arn.com.au/LRRADIO
+英国·伦敦/全国·儿童歌曲/故事	Fun Kids	https://listen-funkids.sharp-stream.com/funkids.mp3
+英国·伦敦/全国·幼儿音乐/故事	Fun Kids Junior	https://listen-funkids.sharp-stream.com/funkidsjunior.mp3
+英国·伦敦/全国·幼儿音乐/故事	Fun Kids Junior AAC	https://listen-funkids.sharp-stream.com/funkidsjunior.aac
+英国·伦敦/全国·儿童休息/睡眠	Fun Kids Naps	http://n04a-eu.rcs.revma.com:80/pp2cg1z3tm0uv
+英国·伦敦/全国·青少年流行	Fun Kids Pop Hits	http://n22a-eu.rcs.revma.com:80/6m5ucmz3tm0uv
+英国·英国/在线·儿童音乐	Spectrum Kidz Radio	http://eu8.fastcast4u.com/proxy/spectrumkidz?mp=/1
