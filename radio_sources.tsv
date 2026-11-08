@@ -276,4 +276,51 @@
 国际英语	BBC World Service	http://stream.live.vc.bbcmedia.co.uk/bbc_world_service
 国际英语	NPR 24 Hour Program	https://npr-ice.streamguys1.com/live.mp3
 国际英语	ABC NewsRadio	https://abc.streamguys1.com/live/newsradio/icecast.audio
-国际英语	ABC Radio National	https://abc.streamguys1.com/live/rnnsw/icecast.audio
+休斯顿·新闻	KUHF 88.7 News 88.7 NPR	https://stream.houstonpublicmedia.org/news-mp3
+休斯顿·古典	Houston Public Media Classical	https://stream.houstonpublicmedia.org/classical-aac?source=iheart
+休斯顿·爵士	KTSU 90.9 The Choice	https://ice6.securenetsystems.net/KTSUFM
+休斯顿·社区	KPFT 90.1 Pacifica	https://streams.pacifica.org:9000/live_64
+休斯顿·新闻	KTRH 740 NewsRadio	https://stream.revma.ihrhls.com/zc2285/hls.m3u8
+休斯顿·流行	KODA 99.1 Sunny	https://stream.revma.ihrhls.com/zc2273/hls.m3u8
+休斯顿·宗教	KSBJ 89.3	https://ais-sa8.cdnstream1.com/3327_64.aac
+休斯顿·宗教	KHCB 105.7	https://khcb.streamguys1.com/live-128k-mp3
+德州其他·新闻	KUT 90.5 Austin	https://streams.kut.org/4426/playlist.m3u8
+德州其他·音乐	AMX Austin Music Experience	https://streams.kut.org/4429_192.mp3?aw_0_1st.playerid=amx-free
+德州其他·音乐	TMX Texas Music Experience	https://streams.kut.org/4430_192.mp3?aw_0_1st.playerid=tmx-free
+德州其他·音乐	Radio Free Texas Currents	https://radio.radiofreetexas.org/listen/rft/radio.mp3
+德州其他·音乐	Radio Free Texas Deep Cuts	https://radio.radiofreetexas.org/listen/rft_deepcuts/radio.mp3
+德州其他·音乐	Radio Free Texas Brand New	https://radio.radiofreetexas.org/listen/rft_brandnew/radio.mp3
+德州其他·音乐	Radio Free Texas Live Sessions	https://radio.radiofreetexas.org/listen/rft_live/radio.mp3
+德州其他·音乐	Radio Free Texas Dance Hall	https://radio.radiofreetexas.org/listen/rft_dancehall/radio.mp3
+德州其他·新闻	KERA 90.1 Dallas	https://kera-ice.streamguys1.com/keraliveaacplus
+德州其他·新闻	KSTX 89.1 San Antonio	https://playerservices.streamtheworld.com/api/livestream-redirect/KSTXFM.mp3
+德州其他·古典	KPAC San Antonio	https://playerservices.streamtheworld.com/api/livestream-redirect/KPACFM.mp3
+德州其他·新闻	KTEP 88.5 El Paso	https://playerservices.streamtheworld.com/api/livestream-redirect/KTEPFM.mp3
+Hermann Park·莱斯大学	KTRU 96.1 Rice Radio	https://ktru.org/listen/纽约·新闻	WNYC 93.9 FM	https://fm939.wnyc.org/wnycfm
+纽约·新闻	WNYC 820 AM	https://am820.wnyc.org/wnycam
+纽约·古典	WQXR 105.9 FM	https://stream.wqxr.org/wqxr
+纽约·当代古典	WQXR New Sounds	https://q2stream.wqxr.org/q2
+纽约·爵士	WBGO 88.3 Jazz	https://ais-sa8.cdnstream1.com/3629_128.mp3
+纽约·爵士	WBGO TOO HD2	https://ais-sa8.cdnstream1.com/3630_128.mp3
+洛杉矶·音乐	KCRW 89.9 Live	https://kcrw.streamguys1.com/kcrw_192k_mp3_on_air
+洛杉矶·新闻	KCRW News	https://kcrw.streamguys1.com/kcrw_192k_mp3_news
+洛杉矶·爵士	KKJZ 88.1 KJazz	https://playerservices.streamtheworld.com/api/livestream-redirect/KKJZFM.mp3
+洛杉矶·经典金曲	KRTH K-EARTH 101	https://playerservices.streamtheworld.com/api/livestream-redirect/KRTHFM.mp3
+洛杉矶·摇滚	KLOS 95.5	https://playerservices.streamtheworld.com/api/livestream-redirect/KLOSFM.mp3
+芝加哥·新闻	WBEZ 91.5 Chicago	https://stream.wbez.org/wbez128.mp3
+旧金山·新闻	KQED 88.5	https://streams.kqed.org/kqedradio.mp3
+西雅图·独立音乐	KEXP 90.3	https://kexp.streamguys1.com/kexp160.aac
+西雅图·新闻	KUOW 94.9	https://playerservices.streamtheworld.com/api/livestream-redirect/KUOWFM_HIGH_MP3.mp3
+华盛顿·新闻	WAMU 88.5	https://hd1.wamu.org/
+费城·公共广播	WHYY Plus HD	https://whyy-hd.streamguys1.com/whyy-hd-mp3
+波士顿·新闻	WBUR 90.9	https://wbur-sc.streamguys1.com/wbur
+达拉斯·新闻	KERA 90.1	https://kera-ice.streamguys1.com/keraliveaacplus
+达拉斯·嘻哈	KBFB 97.9 The Beat	https://playerservices.streamtheworld.com/api/livestream-redirect/KBFBFM.mp3
+达拉斯·乡村	KPLX 99.5 The Wolf	https://playerservices.streamtheworld.com/api/livestream-redirect/KPLXFM.mp3
+奥斯汀·新闻	KUT 90.5	https://streams.kut.org/4426_128.mp3?aw_0_1st.playerid=kut-free
+奥斯汀·独立音乐	KUTX 98.9	https://streams.kut.org/4428_192.mp3?aw_0_1st.playerid=kutx-free
+奥斯汀·本地音乐	KUTX AMX	https://streams.kut.org/4429_192.mp3?aw_0_1st.playerid=amx-free
+奥斯汀·德州音乐	KUTX TMX	https://streams.kut.org/4430_192.mp3?aw_0_1st.playerid=tmx-free
+凤凰城·新闻	KJZZ 91.5	https://kjzz.streamguys1.com/kjzz_mp3_128
+圣安东尼奥·新闻	KSTX 89.1 Texas Public Radio	https://playerservices.streamtheworld.com/api/livestream-redirect/KSTXFM.mp3
+圣安东尼奥·古典	KPAC 88.3	https://playerservices.streamtheworld.com/api/livestream-redirect/KPACFM.mp3
