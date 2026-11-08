@@ -91,6 +91,16 @@
   "Executable used to play radio streams."
   :type 'string)
 
+(defcustom emacs-radio-cache-seconds 30
+  "Maximum audio cache duration in seconds."
+  :type 'integer
+  :group 'emacs-radio)
+
+(defcustom emacs-radio-cache-wait 5
+  "Seconds to buffer before starting or resuming playback."
+  :type 'integer
+  :group 'emacs-radio)
+
 (defcustom emacs-radio-probe-timeout 18
   "Per-station FFmpeg connection/probe timeout in seconds."
   :type 'integer)
@@ -562,19 +572,49 @@ Results live under `emacs-radio-cache-directory'.  Use
               (make-process
                :name "emacs-radio-mpv"
                :buffer buffer
-               :command (append
-                         (list emacs-radio-mpv-program
-                               "--no-config" "--no-video" "--no-terminal"
-                               "--msg-level=all=warn")
-                         ;; 关闭可视化或纯终端 Emacs 不添加滤镜开销。
-                         ;; 开启时只分析当前 mpv 已解码的音频，不会额外拉流。
-                         ;; 通过标签 radio-meter 读取 RMS 元数据。
-                         (when (and emacs-radio-waveform-enabled
-                                    (display-graphic-p)
-                                    (image-type-available-p 'svg))
-                           (list "--af=@radio-meter:astats=metadata=1:reset=1"))
-                         (list (concat "--input-ipc-server=" socket)
-                               "--" url))
+               :command
+               (append
+                ;; --------------------------------------------------
+                ;; mpv 基础启动参数
+                ;; --------------------------------------------------
+                (list emacs-radio-mpv-program
+                      "--no-config"
+                      "--no-video"
+                      "--no-terminal"
+                      "--msg-level=all=warn"
+
+                      ;; 启用网络流媒体缓存。
+                      "--cache=yes"
+
+                      ;; 允许预读取最多约 30 秒的音频。
+                      "--cache-secs=30"
+
+                      ;; 缓冲不足时自动暂停播放。
+                      "--cache-pause=yes"
+
+                      ;; 初次启动时先缓冲。
+                      "--cache-pause-initial=yes"
+
+                      ;; 尽量积累 5 秒数据后开始或恢复播放。
+                      "--cache-pause-wait=5"
+
+                      ;; 限制前向缓存所使用的内存。
+                      "--demuxer-max-bytes=32MiB")
+
+                ;; --------------------------------------------------
+                ;; 原有的真实音频波形分析滤镜
+                ;; 这一部分完全保留，不修改！
+                ;; --------------------------------------------------
+                (when (and emacs-radio-waveform-enabled
+                           (display-graphic-p)
+                           (image-type-available-p 'svg))
+                  (list "--af=@radio-meter:astats=metadata=1:reset=1"))
+
+                ;; --------------------------------------------------
+                ;; mpv JSON IPC 和电台 URL
+                ;; --------------------------------------------------
+                (list (concat "--input-ipc-server=" socket)
+                      "--" url))
                :noquery t
                :sentinel
                (lambda (proc _event)
