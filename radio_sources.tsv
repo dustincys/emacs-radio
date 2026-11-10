@@ -56,6 +56,14 @@
 黑龙江	黑龙江私家车频道广播	http://satellitepull.cnr.cn/live/wx32hljsjcgb/playlist.m3u8
 黑龙江	黑龙江乡村广播	http://satellitepull.cnr.cn/live/wx32hljxcgb/playlist.m3u8
 黑龙江	黑龙江交通广播	http://satellitepull.cnr.cn/live/wx32hljjtgb/playlist.m3u8
+黑龙江	黑龙江新闻广播	https://stream3.hljtv.com/hljrdxw/sd/live.m3u8
+黑龙江	黑龙江交通广播	https://stream3.hljtv.com/hljrdjt/sd/live.m3u8
+黑龙江	黑龙江老年少儿广播（爱家广播）	https://idclive.hljtv.com:4430/live/hljrd97_sd.m3u8
+黑龙江	黑龙江都市女性广播	https://stream3.hljtv.com/hljrdnx/sd/live.m3u8
+黑龙江	黑龙江音乐广播	https://stream3.hljtv.com/hljrdyy/sd/live.m3u8
+黑龙江	黑龙江生活广播	https://stream3.hljtv.com/hljrdsh/sd/live.m3u8
+黑龙江	黑龙江高校广播	https://stream3.hljtv.com/hljrdgx/sd/live.m3u8
+黑龙江	黑龙江朝鲜语广播	http://stream3.hljtv.com/hljrdcy/sd/live.m3u8
 上海	上海东方广播电台	http://satellitepull.cnr.cn/live/wx32dfgbdt/playlist.m3u8
 上海	上海新闻广播	http://satellitepull.cnr.cn/live/wx32shrmgb/playlist.m3u8
 江苏	江苏新闻综合广播	http://satellitepull.cnr.cn/live/wx32jsxwzhgb/playlist.m3u8
@@ -360,3 +368,23 @@ Hermann Park·莱斯大学	KTRU 96.1 Rice Radio	https://ktru.org/listen/纽约·
 英国·伦敦/全国·儿童休息/睡眠	Fun Kids Naps	http://n04a-eu.rcs.revma.com:80/pp2cg1z3tm0uv
 英国·伦敦/全国·青少年流行	Fun Kids Pop Hits	http://n22a-eu.rcs.revma.com:80/6m5ucmz3tm0uv
 英国·英国/在线·儿童音乐	Spectrum Kidz Radio	http://eu8.fastcast4u.com/proxy/spectrumkidz?mp=/1
+慢速英语·美国之音·初中级·华盛顿	VOA Learning English - legacy HLS	https://voa-ingest.akamaized.net/hls/live/2035234/160_342L/playlist.m3u8
+儿童故事·入门·美国	Kids Public Radio - Jabberwocky	http://kidspublicradio.got.net:8000/jabberwocky
+儿童歌曲·入门·美国	Kids Public Radio - Pipsqueaks	http://kidspublicradio2.got.net:8000/pipsqueaks
+儿童故事·初级·美国	Kiddo Radio	https://api.radioking.io/radio/553403/listen.m3u
+儿童故事·初级·美国	LifeTalk Kids	https://listen.streamon.fm/ltrkids
+儿童故事·初级·密歇根	Keys for Kids Radio	https://streaming.live365.com/a78246
+朗读·中级·堪萨斯	University of Kansas Audio-Reader	http://streaming.kansaspublicradio.org:8000/audioreader
+公共广播·中级·纽约	WNYC 93.9 FM	https://fm939.wnyc.org/wnycfm
+公共广播·中级·纽约	WNYC 820 AM	https://am820.wnyc.org/wnycam
+公共广播·中级·西雅图	KUOW 94.9 FM	https://playerservices.streamtheworld.com/api/livestream-redirect/KUOWFM_HIGH_MP3.mp3
+公共广播·中级·奥斯汀	KUT News 90.5 FM	https://streams.kut.org/4426_128.mp3?aw_0_1st.playerid=kut-free
+公共广播·中级·旧金山	KQED 88.5 FM	https://streams.kqed.org/kqedradio.mp3
+公共广播·中级·威斯康星	WPR News	https://wpr-ice.streamguys1.com/wpr-ideas-mp3-64
+公共广播·中级·巴尔的摩	WYPR 88.1 FM	https://wtmd-ice.streamguys1.com/wypr-1-mp3
+公共广播·中级·萨克拉门托	CapRadio News KXJZ	https://playerservices.streamtheworld.com/api/livestream-redirect/KXJZ.mp3
+公共广播·中级·芝加哥	WBEZ 91.5 FM	https://stream.wbez.org/wbez128.mp3
+公共广播·中级·波士顿	WBUR 90.9 FM	https://icecast-stream.wbur.org/wbur_www
+公共广播·中级·休斯顿	KUHF News 88.7 FM	https://stream.houstonpublicmedia.org/news-mp3
+公共广播·中级·佛罗里达	WQCS 88.9 FM	https://playerservices.streamtheworld.com/mp3/WQCSFM.mp3
+新闻访谈·中高级·华盛顿	C-SPAN Radio	https://playerservices.streamtheworld.com/api/livestream-redirect/CSPANRADIO.mp3

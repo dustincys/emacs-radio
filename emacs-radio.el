@@ -580,6 +580,7 @@ Results live under `emacs-radio-cache-directory'.  Use
                 (list emacs-radio-mpv-program
                       "--no-config"
                       "--no-video"
+                      "--vid=no"
                       "--no-terminal"
                       "--msg-level=all=warn"
 
