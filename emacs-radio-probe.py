@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+import wave
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -108,16 +109,71 @@ def probe_once(url, timeout, sample_seconds, min_seconds):
             '返回码': '' if code is None else str(code), '信息': info}
 
 
+def probe_mpv(url, timeout, sample_seconds, min_seconds):
+    """mpv fallback: disable video and capture actual decoded WAV audio."""
+    if shutil.which('mpv') is None:
+        return {'状态': 'FAILED', '音频秒数': '0.00', '返回码': '',
+                '信息': 'mpv not installed (needed for fallback)', '检测器': 'mpv'}
+    with tempfile.TemporaryDirectory(prefix='radio-mpv-') as tmpdir:
+        output = Path(tmpdir) / 'probe.wav'
+        cmd = [
+            'mpv', '--no-config', '--no-terminal', '--no-video', '--vid=no',
+            '--msg-level=all=error', '--cache=yes',
+            '--audio-samplerate=8000', '--audio-channels=mono',
+            '--audio-format=s16', '--ao=pcm', f'--ao-pcm-file={output}',
+            f'--length={sample_seconds}', url,
+        ]
+        timed_out = False
+        try:
+            cp = subprocess.run(cmd, capture_output=True, timeout=timeout,
+                                check=False)
+            diagnostics = cp.stderr or b''
+            code = cp.returncode
+        except subprocess.TimeoutExpired as exc:
+            timed_out = True
+            diagnostics = exc.stderr or b''
+            code = None
+        except OSError as exc:
+            return {'状态': 'FAILED', '音频秒数': '0.00', '返回码': '',
+                    '信息': str(exc)[:300], '检测器': 'mpv'}
+
+        seconds = 0.0
+        if output.is_file():
+            try:
+                with wave.open(str(output), 'rb') as wav:
+                    seconds = min(wav.getnframes(), max(0, output.stat().st_size - 44) // max(1, wav.getnchannels() * wav.getsampwidth())) / wav.getframerate()
+            except (wave.Error, EOFError, OSError, ZeroDivisionError):
+                # Incomplete WAV header after timeout: use the output size as a
+                # conservative estimate, since we requested 8kHz mono s16.
+                seconds = max(0, output.stat().st_size - 44) / 16000
+        info = diagnostics.decode('utf-8', 'replace').replace('\r', ' ').replace('\n', ' ')[:300]
+        status = 'PLAYABLE' if seconds >= min_seconds else classify_error(info, timed_out)
+        return {'状态': status, '音频秒数': f'{seconds:.2f}',
+                '返回码': '' if code is None else str(code),
+                '信息': info, '检测器': 'mpv'}
+
+
 def check_stream(row, args):
     last = None
-    for attempt in range(1, args.retries + 2):
-        last = probe_once(row['URL'], args.timeout, args.sample_seconds,
-                          args.min_seconds)
-        if last['状态'] == 'PLAYABLE':
-            break
-        if attempt <= args.retries:
-            time.sleep(min(attempt, 2))
-    return {**row, **last, '尝试次数': str(attempt)}
+    engines = (['mpv'] if args.engine == 'mpv'
+               else ['ffmpeg'] if args.engine == 'ffmpeg'
+               else ['mpv', 'ffmpeg'])
+    attempts = 0
+    for engine in engines:
+        for attempt in range(1, args.retries + 2):
+            attempts += 1
+            if engine == 'mpv':
+                last = probe_mpv(row['URL'], args.timeout, args.sample_seconds,
+                                 args.min_seconds)
+            else:
+                last = probe_once(row['URL'], args.timeout, args.sample_seconds,
+                                  args.min_seconds)
+                last['检测器'] = 'ffmpeg'
+            if last['状态'] == 'PLAYABLE':
+                return {**row, **last, '尝试次数': str(attempts)}
+            if attempt <= args.retries:
+                time.sleep(min(attempt, 2))
+    return {**row, **last, '尝试次数': str(attempts)}
 
 
 def write_stations(file, rows):
@@ -129,7 +185,7 @@ def write_stations(file, rows):
 
 def write_results(file, rows):
     writer = csv.DictWriter(file,
-                            fieldnames=[*COLUMNS, '状态', '音频秒数', '返回码', '尝试次数', '信息'],
+                            fieldnames=[*COLUMNS, '状态', '音频秒数', '返回码', '尝试次数', '检测器', '信息'],
                             extrasaction='ignore')
     writer.writeheader()
     writer.writerows(rows)
@@ -150,6 +206,8 @@ def main():
     parser.add_argument('--output-dir', required=True, help='缓存目录')
     parser.add_argument('--timeout', type=float, default=30, help='单次尝试的总超时秒数 (默认30)')
     parser.add_argument('--workers', type=int, default=8, help='并行检测数量')
+    parser.add_argument('--engine', choices=['auto', 'ffmpeg', 'mpv'], default='auto',
+                        help='auto: mpv first, then FFmpeg; mpv: only mpv')
     parser.add_argument('--retries', type=int, default=2, help='失败重试次数')
     parser.add_argument('--sample-seconds', type=float, default=2.0,
                         help='最多解码多少秒音频（默认2）')
@@ -158,7 +216,9 @@ def main():
     parser.add_argument('--no-write-back', action='store_true', help='不覆盖源文件')
     parser.add_argument('--allow-empty', action='store_true', help='允许空结果覆盖源文件（不推荐）')
     args = parser.parse_args()
-    if shutil.which('ffmpeg') is None:
+    if args.engine in ('auto', 'mpv') and shutil.which('mpv') is None:
+        parser.error('mpv not found')
+    if args.engine in ('auto', 'ffmpeg') and shutil.which('ffmpeg') is None:
         parser.error('ffmpeg not found')
     if (args.workers < 1 or args.timeout <= 0 or args.retries < 0 or
         args.min_seconds <= 0 or args.sample_seconds < args.min_seconds):
@@ -177,13 +237,20 @@ def main():
             result = future.result()
             results[index] = result
             print(f"{result['状态']:<10} {result['音频秒数']:>5}s "
-                  f"try={result['尝试次数']} {result['分类']} {result['电台']}", flush=True)
+                  f"try={result['尝试次数']} via={result['检测器']} {result['分类']} {result['电台']}", flush=True)
     playable = [row for row in results if row['状态'] == 'PLAYABLE']
     atomic_write(outdir / 'radio_results.csv', lambda f: write_results(f, results))
-    atomic_write(outdir / 'radio_playable.tsv', lambda f: write_stations(f, playable))
-    atomic_write(outdir / 'radio_playable.m3u', lambda f: write_m3u(f, playable))
+    # Preserve the last known-good playlist on a completely failed scan.
+    # A failed network check must not erase the Helm station selection.
+    if playable:
+        atomic_write(outdir / 'radio_playable.tsv', lambda f: write_stations(f, playable))
+        atomic_write(outdir / 'radio_playable.m3u', lambda f: write_m3u(f, playable))
+    else:
+        print('WARNING: zero playable stations; retaining previous cache', flush=True)
     print(f'Playable: {len(playable)}/{len(results)} unique streams', flush=True)
     print(f'Cache directory: {outdir}', flush=True)
+    if not playable:
+        return
     if args.no_write_back:
         print('Source TSV unchanged (--no-write-back).', flush=True)
     elif not playable and not args.allow_empty:
