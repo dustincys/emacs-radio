@@ -1,13 +1,13 @@
 ;;; emacs-radio.el --- Helm radio browser and mpv player -*- lexical-binding: t; -*-
 
 ;; Author: ChatGPT
-;; Version: 0.4.0
+;; Version: 0.7.0
 ;; Package-Requires: ((emacs "27.1") (helm "3.0"))
 ;; Keywords: multimedia, convenience
 ;; URL: https://github.com/dustincys/emacs-radio
 
 ;;; Commentary:
-;; Read radio_sources.tsv, asynchronously probe streams using FFmpeg,
+;; Read radio_sources.tsv, asynchronously probe streams using mpv or FFmpeg,
 ;; store verified playable stations, select with Helm, play using mpv,
 ;; and show a clickable station/status indicator in the global mode line.
 ;; See README.md for setup.
@@ -51,7 +51,8 @@
 ;;   lambda：匿名回调；sentinel：进程退出等事件回调；
 ;;   buffer：Emacs 文本缓冲区（可用作后台进程日志）。
 ;;
-;; v0.4.0 增加 mpv astats 实时 RMS -> SVG 曲线；详见 emacs-radio-waveform.el。
+;; v0.7.0 将动态 URL 解析集成进扫描器和播放过程；
+;; mpv astats 实时 RMS -> SVG 曲线保留在 emacs-radio-waveform.el。
 ;; ============================================================================
 
 (require 'cl-lib)
@@ -109,6 +110,23 @@
   "Maximum concurrent probe workers."
   :type 'integer)
 
+(defcustom emacs-radio-scan-engine "mpv"
+  "Probe engine: mpv, ffmpeg, or auto (mpv then ffmpeg)."
+  :type '(choice (const "mpv") (const "ffmpeg") (const "auto"))
+  :group 'emacs-radio)
+
+(defcustom emacs-radio-scan-retries 1
+  "Number of extra tries for each probe engine."
+  :type 'natnum :group 'emacs-radio)
+
+(defcustom emacs-radio-scan-sample-seconds 2.0
+  "Maximum amount of audio to decode during a scan."
+  :type 'number :group 'emacs-radio)
+
+(defcustom emacs-radio-scan-min-seconds 0.5
+  "Minimum decoded audio duration for a stream to be marked playable."
+  :type 'number :group 'emacs-radio)
+
 (defcustom emacs-radio-probe-script nil
   "Optional explicit path of emacs-radio-probe.py.
 If nil, find it alongside emacs-radio.el."
@@ -130,11 +148,28 @@ When nil, use radio_usage.tsv inside `emacs-radio-cache-directory'."
   :type '(choice (const :tag "Cache directory default" nil) file))
 
 ;; --------------------------------------------------------------------------
-;; 函数：emacs-radio--usage-path
-;; 返回播放次数统计文件的实际路径。
-;; 默认放在缓存目录内；若用户设置了 emacs-radio-usage-file 则优先使用。
-;; 这样更新电台清单时，统计文件仍可独立保存。
+;; 函数：emacs-radio--stable-url
+;; 对央广/CRI 直播源去除临时签名，使缓存和播放次数与签名无关。
 ;; --------------------------------------------------------------------------
+(defun emacs-radio--stable-url (url)
+  "Remove short-lived key/time tokens from CNR/CRI HLS URLs.
+This keeps historical usage counts and cached stations stable across scans."
+  (if (not (and (stringp url)
+                (string-match
+                 "\\`\\(https?://\\(?:ngcdn[0-9]+\\.cnr\\.cn\\|sk\\.cri\\.cn\\)/[^?#]+\\.m3u8\\)\\(?:\\?\\([^#]*\\)\\)?\\(?:#.*\\)?\\'"
+                 url)))
+      url
+    (let* ((base (match-string 1 url))
+           (query (match-string 2 url))
+           (fields (and query (split-string query "&" t)))
+           (kept (cl-remove-if
+                  (lambda (field)
+                    (member (downcase (car (split-string field "=")))
+                            '("key" "time")))
+                  fields)))
+      (concat base (if kept (concat "?" (string-join kept "&")) "")))))
+
+;; 播放次数统计位置：默认缓存目录，可通过 emacs-radio-usage-file 指定。
 (defun emacs-radio--usage-path ()
   "Return the path to the persistent station usage counter file.
 The default follows the radio cache directory, so no extra setup is needed."
@@ -168,9 +203,10 @@ Malformed lines are ignored, and repeated URLs keep their largest count."
             (when (and (= (length fields) 2)
                        (not (string-empty-p url))
                        (string-match-p "\\`[0-9]+\\'" count))
-              (puthash url (max (string-to-number count)
-                                (gethash url emacs-radio--usage-counts 0))
-                       emacs-radio--usage-counts)))
+              (let ((stable (emacs-radio--stable-url url)))
+                (puthash stable (max (string-to-number count)
+                                     (gethash stable emacs-radio--usage-counts 0))
+                         emacs-radio--usage-counts))))
           (forward-line 1))))))
 
 ;; --------------------------------------------------------------------------
@@ -292,6 +328,7 @@ This is intended for simple TSV fields without embedded newlines/tabs."
             (when (and (= (length fields) 3)
                        (not (equal (car fields) "分类"))
                        (not (string-empty-p (nth 2 fields))))
+              (setf (nth 2 fields) (emacs-radio--stable-url (nth 2 fields)))
               (push fields rows)))
           (forward-line 1))
         (nreverse rows)))))
@@ -337,6 +374,12 @@ This is intended for simple TSV fields without embedded newlines/tabs."
              (dir (and library (file-name-directory library))))
         (and dir (expand-file-name "emacs-radio-probe.py" dir)))))
 
+(defun emacs-radio--play-script ()
+  "Return the bundled Python mpv launcher, next to emacs-radio.el."
+  (let* ((library (or (locate-library "emacs-radio") load-file-name))
+         (dir (and library (file-name-directory library))))
+    (and dir (expand-file-name "emacs-radio-play.py" dir))))
+
 ;; --------------------------------------------------------------------------
 ;; 函数：emacs-radio-scan
 ;; 启动异步检测任务，而不是在 Emacs 主线程中逐台等待。
@@ -346,10 +389,9 @@ This is intended for simple TSV fields without embedded newlines/tabs."
 ;; 注意：脚本成功完成 ≠ 所有电台都可播放；具体结果见 CSV 和日志。
 ;; --------------------------------------------------------------------------
 (defun emacs-radio-scan ()
-  "Asynchronously probe ALL sources and replace cached playable list.
-Results live under `emacs-radio-cache-directory'.  Use
-`emacs-radio-scan-log' to inspect progress."
-  ;; Spawn Python asynchronously; the sentinel reloads a successful scan.
+  "Asynchronously scan stable stream URLs, refreshing signed URLs per probe.
+Never overwrite the source TSV.  Keep the last good playable cache if all
+streams fail.  Inspect `emacs-radio-scan-log' for diagnostics."
   (interactive)
   (when (process-live-p emacs-radio--scan-process)
     (user-error "A radio scan is already running"))
@@ -357,16 +399,18 @@ Results live under `emacs-radio-cache-directory'.  Use
     (user-error "Cannot read source TSV: %s" emacs-radio-sources-file))
   (unless (executable-find emacs-radio-python-program)
     (user-error "Python not found: %s" emacs-radio-python-program))
-  (unless (executable-find "ffmpeg")
-    (user-error "FFmpeg not found; install ffmpeg"))
+  (when (member emacs-radio-scan-engine '("auto" "mpv"))
+    (unless (executable-find emacs-radio-mpv-program)
+      (user-error "mpv not found: %s" emacs-radio-mpv-program)))
+  (when (member emacs-radio-scan-engine '("auto" "ffmpeg"))
+    (unless (executable-find "ffmpeg")
+      (user-error "FFmpeg not found")))
   (let ((script (emacs-radio--probe-script)))
     (unless (and script (file-readable-p script))
-      (user-error "Cannot find emacs-radio-probe.py alongside emacs-radio.el"))
+      (user-error "Cannot read scanner: %s" script))
     (make-directory emacs-radio-cache-directory t)
     (with-current-buffer (get-buffer-create emacs-radio--scan-buffer)
       (erase-buffer))
-    ;; 启动外部 Python 进程之后立即返回，Emacs 仍可编辑/移动光标。
-    ;; 后续“检测完毕”的处理全部发生在 :sentinel 回调中。
     (setq emacs-radio--scan-process
           (make-process
            :name "emacs-radio-scan"
@@ -375,21 +419,26 @@ Results live under `emacs-radio-cache-directory'.  Use
                           "--input" (expand-file-name emacs-radio-sources-file)
                           "--output-dir" (expand-file-name emacs-radio-cache-directory)
                           "--timeout" (number-to-string emacs-radio-probe-timeout)
-                          "--workers" (number-to-string emacs-radio-probe-workers))
+                          "--workers" (number-to-string emacs-radio-probe-workers)
+                          "--engine" emacs-radio-scan-engine
+                          "--retries" (number-to-string emacs-radio-scan-retries)
+                          "--sample-seconds" (number-to-string emacs-radio-scan-sample-seconds)
+                          "--min-seconds" (number-to-string emacs-radio-scan-min-seconds)
+                          "--mpv" emacs-radio-mpv-program
+                          "--no-write-back")
            :noquery t
            :sentinel
            (lambda (proc _event)
              (when (and (eq proc emacs-radio--scan-process)
                         (memq (process-status proc) '(exit signal)))
                (if (and (eq (process-status proc) 'exit)
-                        (= (process-exit-status proc) 0))
+                        (zerop (process-exit-status proc)))
                    (progn
                      (emacs-radio-load)
-                     (message "Radio scan completed: %d playable. Cache: %s"
-                              (length emacs-radio--stations)
-                              emacs-radio-cache-directory))
-                 (message "Radio scan failed; see M-x emacs-radio-scan-log"))))))
-    (message "Radio scan started in background; M-x emacs-radio-scan-log for progress")))
+                     (message "Radio scan completed: %d playable (M-x emacs-radio-scan-log)"
+                              (length emacs-radio--stations)))
+                 (message "Radio scan failed (M-x emacs-radio-scan-log)"))))))
+    (message "Radio scan started; M-x emacs-radio-scan-log")))
 
 ;; --------------------------------------------------------------------------
 ;; 函数：emacs-radio-scan-log
@@ -555,6 +604,10 @@ Results live under `emacs-radio-cache-directory'.  Use
   ;; Stop the previous station and start one mpv process with an IPC socket.
   (unless (executable-find emacs-radio-mpv-program)
     (user-error "mpv not found: %s" emacs-radio-mpv-program))
+  (unless (executable-find emacs-radio-python-program)
+    (user-error "Python not found: %s" emacs-radio-python-program))
+  (unless (file-readable-p (emacs-radio--play-script))
+    (user-error "Cannot read emacs-radio-play.py alongside emacs-radio.el"))
   (unless (and (listp station) (= (length station) 3))
     (user-error "Invalid radio station"))
   (unless emacs-radio-mode (emacs-radio-mode 1))
@@ -577,7 +630,12 @@ Results live under `emacs-radio-cache-directory'.  Use
                 ;; --------------------------------------------------
                 ;; mpv 基础启动参数
                 ;; --------------------------------------------------
-                (list emacs-radio-mpv-program
+                ;; The Python wrapper refreshes CNR/CRI signed URLs and
+                ;; execs mpv in-place, retaining the process and IPC socket.
+                (list emacs-radio-python-program
+                      (emacs-radio--play-script)
+                      "--url" url "--name" (nth 1 station)
+                      "--mpv" emacs-radio-mpv-program "--"
                       "--no-config"
                       "--no-video"
                       "--vid=no"
@@ -588,7 +646,7 @@ Results live under `emacs-radio-cache-directory'.  Use
                       "--cache=yes"
 
                       ;; 允许预读取最多约 30 秒的音频。
-                      "--cache-secs=30"
+                      (format "--cache-secs=%s" emacs-radio-cache-seconds)
 
                       ;; 缓冲不足时自动暂停播放。
                       "--cache-pause=yes"
@@ -597,7 +655,7 @@ Results live under `emacs-radio-cache-directory'.  Use
                       "--cache-pause-initial=yes"
 
                       ;; 尽量积累 5 秒数据后开始或恢复播放。
-                      "--cache-pause-wait=5"
+                      (format "--cache-pause-wait=%s" emacs-radio-cache-wait)
 
                       ;; 限制前向缓存所使用的内存。
                       "--demuxer-max-bytes=32MiB")
@@ -614,8 +672,7 @@ Results live under `emacs-radio-cache-directory'.  Use
                 ;; --------------------------------------------------
                 ;; mpv JSON IPC 和电台 URL
                 ;; --------------------------------------------------
-                (list (concat "--input-ipc-server=" socket)
-                      "--" url))
+                (list (concat "--input-ipc-server=" socket)))
                :noquery t
                :sentinel
                (lambda (proc _event)

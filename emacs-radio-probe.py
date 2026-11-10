@@ -10,6 +10,7 @@ import time
 import wave
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from emacs_radio_resolver import ResolveError, resolve_url, stable_url, redact_signed_urls
 
 COLUMNS = ('分类', '电台', 'URL')
 RATE = 8000
@@ -47,11 +48,13 @@ def read_and_deduplicate(source, parser):
         parser.error('TSV has no station entries')
     seen, unique = set(), []
     for row in input_rows:
-        url = (row.get('URL') or '').strip()
+        url = stable_url((row.get('URL') or '').strip())
         if not url or url in seen:
             continue
         seen.add(url)
-        unique.append({key: (row.get(key) or '').strip() for key in COLUMNS})
+        item = {key: (row.get(key) or '').strip() for key in COLUMNS}
+        item['URL'] = url
+        unique.append(item)
     print(f'Input: {len(input_rows)} rows; unique URLs: {len(unique)}; '
           f'duplicates/empty URLs skipped: {len(input_rows) - len(unique)}', flush=True)
     return unique
@@ -99,7 +102,7 @@ def probe_once(url, timeout, sample_seconds, min_seconds):
                 '返回码': '', '信息': str(exc)[:300]}
 
     audio_seconds = len(pcm) / (RATE * CHANNELS * BYTES_PER_SAMPLE)
-    info = diagnostics.decode('utf-8', errors='replace').replace('\r', ' ').replace('\n', ' ')[:300]
+    info = redact_signed_urls(diagnostics.decode('utf-8', errors='replace').replace('\r', ' ').replace('\n', ' '))[:300]
     if audio_seconds >= min_seconds:
         # Valid PCM received, even if broken HLS timestamps later produce errors.
         status = 'PLAYABLE'
@@ -109,15 +112,15 @@ def probe_once(url, timeout, sample_seconds, min_seconds):
             '返回码': '' if code is None else str(code), '信息': info}
 
 
-def probe_mpv(url, timeout, sample_seconds, min_seconds):
+def probe_mpv(url, timeout, sample_seconds, min_seconds, mpv='mpv'):
     """mpv fallback: disable video and capture actual decoded WAV audio."""
-    if shutil.which('mpv') is None:
+    if shutil.which(mpv) is None:
         return {'状态': 'FAILED', '音频秒数': '0.00', '返回码': '',
                 '信息': 'mpv not installed (needed for fallback)', '检测器': 'mpv'}
     with tempfile.TemporaryDirectory(prefix='radio-mpv-') as tmpdir:
         output = Path(tmpdir) / 'probe.wav'
         cmd = [
-            'mpv', '--no-config', '--no-terminal', '--no-video', '--vid=no',
+            mpv, '--no-config', '--no-terminal', '--no-video', '--vid=no',
             '--msg-level=all=error', '--cache=yes',
             '--audio-samplerate=8000', '--audio-channels=mono',
             '--audio-format=s16', '--ao=pcm', f'--ao-pcm-file={output}',
@@ -146,7 +149,7 @@ def probe_mpv(url, timeout, sample_seconds, min_seconds):
                 # Incomplete WAV header after timeout: use the output size as a
                 # conservative estimate, since we requested 8kHz mono s16.
                 seconds = max(0, output.stat().st_size - 44) / 16000
-        info = diagnostics.decode('utf-8', 'replace').replace('\r', ' ').replace('\n', ' ')[:300]
+        info = redact_signed_urls(diagnostics.decode('utf-8', 'replace').replace('\r', ' ').replace('\n', ' '))[:300]
         status = 'PLAYABLE' if seconds >= min_seconds else classify_error(info, timed_out)
         return {'状态': status, '音频秒数': f'{seconds:.2f}',
                 '返回码': '' if code is None else str(code),
@@ -154,6 +157,7 @@ def probe_mpv(url, timeout, sample_seconds, min_seconds):
 
 
 def check_stream(row, args):
+    """Probe fresh URLs; never persist short-lived signatures in result rows."""
     last = None
     engines = (['mpv'] if args.engine == 'mpv'
                else ['ffmpeg'] if args.engine == 'ffmpeg'
@@ -162,13 +166,24 @@ def check_stream(row, args):
     for engine in engines:
         for attempt in range(1, args.retries + 2):
             attempts += 1
-            if engine == 'mpv':
-                last = probe_mpv(row['URL'], args.timeout, args.sample_seconds,
-                                 args.min_seconds)
+            try:
+                # Resolution can fail independently of the actual audio decoder.
+                # On a retry, bypass the short resolver cache.
+                stream = resolve_url(row['URL'], row['电台'],
+                                     timeout=min(8.0, args.timeout),
+                                     refresh=(attempts > 1))
+            except ResolveError as exc:
+                last = {'状态': 'RESOLVE_ERROR', '音频秒数': '0.00',
+                        '返回码': '', '检测器': 'resolver',
+                        '信息': redact_signed_urls(str(exc))[:300]}
             else:
-                last = probe_once(row['URL'], args.timeout, args.sample_seconds,
-                                  args.min_seconds)
-                last['检测器'] = 'ffmpeg'
+                if engine == 'mpv':
+                    last = probe_mpv(stream, args.timeout, args.sample_seconds,
+                                     args.min_seconds, mpv=args.mpv)
+                else:
+                    last = probe_once(stream, args.timeout, args.sample_seconds,
+                                      args.min_seconds)
+                    last['检测器'] = 'ffmpeg'
             if last['状态'] == 'PLAYABLE':
                 return {**row, **last, '尝试次数': str(attempts)}
             if attempt <= args.retries:
@@ -213,11 +228,13 @@ def main():
                         help='最多解码多少秒音频（默认2）')
     parser.add_argument('--min-seconds', type=float, default=0.5,
                         help='判为可播放所需的最短有效音频秒数')
-    parser.add_argument('--no-write-back', action='store_true', help='不覆盖源文件')
-    parser.add_argument('--allow-empty', action='store_true', help='允许空结果覆盖源文件（不推荐）')
+    parser.add_argument('--no-write-back', action='store_true', help='保留源 TSV（兼容旧调用）')
+    parser.add_argument('--write-back', action='store_true',
+                        help='明确要求时才把成功电台写回源 TSV，且生成 .bak')
+    parser.add_argument('--mpv', default='mpv', help='mpv executable path/name')
     args = parser.parse_args()
-    if args.engine in ('auto', 'mpv') and shutil.which('mpv') is None:
-        parser.error('mpv not found')
+    if args.engine in ('auto', 'mpv') and shutil.which(args.mpv) is None:
+        parser.error(f'mpv not found: {args.mpv}')
     if args.engine in ('auto', 'ffmpeg') and shutil.which('ffmpeg') is None:
         parser.error('ffmpeg not found')
     if (args.workers < 1 or args.timeout <= 0 or args.retries < 0 or
@@ -251,10 +268,8 @@ def main():
     print(f'Cache directory: {outdir}', flush=True)
     if not playable:
         return
-    if args.no_write_back:
-        print('Source TSV unchanged (--no-write-back).', flush=True)
-    elif not playable and not args.allow_empty:
-        print('WARNING: No PLAYABLE streams; source TSV NOT modified.', flush=True)
+    if not args.write_back or args.no_write_back:
+        print('Source TSV unchanged (default safe behavior).', flush=True)
     else:
         backup = source.with_name(source.name + '.bak')
         atomic_backup(source, backup)
