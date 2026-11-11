@@ -110,7 +110,7 @@
   "Maximum concurrent probe workers."
   :type 'integer)
 
-(defcustom emacs-radio-scan-engine "mpv"
+(defcustom emacs-radio-scan-engine "auto"
   "Probe engine: mpv, ffmpeg, or auto (mpv then ffmpeg)."
   :type '(choice (const "mpv") (const "ffmpeg") (const "auto"))
   :group 'emacs-radio)
